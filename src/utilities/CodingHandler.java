@@ -14,26 +14,25 @@ public class CodingHandler {
 		try {
 			this.messageCharset = Charset.forName(charSet);
 		}catch(UnsupportedCharsetException e) {
-			System.out.println("Cant parse Charset");
+			System.out.println("Can't parse Charset");
 		}
 	}
 
-	public byte[] fromString(String s) {
+	public byte[] stringToByteBufer(String s) {
 		byte[] retVal;
 		retVal=s.getBytes(messageCharset);
 		return retVal;
 	}
 	
 	//doesnt work
-	public String toString(ByteBuffer buff) {
-	/*	CharsetDecoder dec = messageCharset.newDecoder();
+	public String byteBufferToString(ByteBuffer buff) {
+		CharsetDecoder decoder = this.messageCharset.newDecoder();
 		CharBuffer charBuff = null;
 		try {
-			charBuff = dec.decode(buff);
+			charBuff = decoder.decode(buff);
 		} catch (CharacterCodingException e) {
-			System.out.println("Cant decode Buffer");
+			System.out.println("Can't decode Buffer");
 		}
-		return charBuff.toString();*/
-		return null;
+		return charBuff.toString();
 	}
 }
