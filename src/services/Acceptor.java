@@ -19,7 +19,7 @@ public class Acceptor {
 
 	public Acceptor(Selector selector) {
 		this.selector=selector;
-		this.coder = new CodingHandler();
+		this.coder = new CodingHandler("US-ASCII");
 	}
 	
 	//run Loop iterating over readySet

@@ -10,9 +10,9 @@ import java.nio.charset.UnsupportedCharsetException;
 public class CodingHandler {
 	private Charset messageCharset = null;
 	
-	public CodingHandler() {
+	public CodingHandler(String charSet) {
 		try {
-			this.messageCharset = Charset.forName("US-ASCII");
+			this.messageCharset = Charset.forName(charSet);
 		}catch(UnsupportedCharsetException e) {
 			System.out.println("Cant parse Charset");
 		}

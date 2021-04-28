@@ -20,12 +20,17 @@ public class SMTPServer {
 	
 	public SMTPServer(){
 
+		// Load configuration file
+		ConfigHandler serverConfig = new ConfigHandler("./config.properties");
+		// Cast server port configuration
+		int serverPort = (int) serverConfig.getProperty("SMTP_Server_Port");
+
 		//creates Selector and listens on Port 25 for connection
 		try {
 			selector= Selector.open();
 			serverSock = ServerSocketChannel.open();
 			serverSock.configureBlocking(false);
-			serverSock.socket().bind(new InetSocketAddress(25));
+			serverSock.socket().bind(new InetSocketAddress(serverPort));
 			
 			serverSock.register(selector, SelectionKey.OP_ACCEPT);
 			System.out.println("Opened Socket on Port 25");
