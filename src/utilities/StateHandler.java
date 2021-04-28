@@ -5,8 +5,8 @@ import java.nio.ByteBuffer;
 public class StateHandler {
 
 	// Valid states
-	// 0 - waiting for HELO
-	// 1 - HELO received
+	// 0 - begin
+	// 1 - HELO received, waiting
 	// 2 - MAIL FROM received
 	// 3 - RCPT TO received
 	// 4 - DATA received
@@ -21,6 +21,13 @@ public class StateHandler {
 	public StateHandler() {
 		this.state = 0;
 		lastCommand = "";
+	}
+
+	public setState(int state) {
+
+		// Switch statement for the different states and the command
+		int currentTransition = null;
+
 	}
 	
 	public int getState() {
