@@ -10,20 +10,20 @@ public class Server {
 	private ServerSocketChannel serverSock;
 
 	
-	public Server() throws IOException{
+	public Server(Int port) throws IOException{
 
 		//creates Selector and listens on Port 25 for connection
 		selector= Selector.open();
 		serverSock = ServerSocketChannel.open();
 		serverSock.configureBlocking(false);
-		serverSock.socket().bind(new InetSocketAddress(25));
+		serverSock.socket().bind(new InetSocketAddress(port));
 		
 		serverSock.register(selector, SelectionKey.OP_ACCEPT);
-		runLoop();
+
 	}
 	
 	//runtime loop
-	private void runLoop() throws IOException {
+	private void run() throws IOException {
 		while (true) {
 			if(selector.select()==0) {
 				continue;
@@ -63,11 +63,6 @@ public class Server {
 		}catch (Exception e){
 			System.out.print("Failed to accept new Client");
 		}
-	}
-	
-	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-
 	}
 
 }
