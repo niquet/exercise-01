@@ -60,8 +60,8 @@ public class Acceptor {
 			SelectionKey clientKey = client.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 			
 			//create new Stage instance and attach it to client key
-			Stage stage = new Stage();
-			clientKey.attach(stage);
+			State state = new State();
+			clientKey.attach(state);
 			
 			System.out.println("Accepted connection from" + client.socket().getInetAddress().getHostAddress()+".");
 		}catch (Exception e){
