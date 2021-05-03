@@ -71,6 +71,10 @@ public class Acceptor {
 			clientKey.attach(state);
 			
 			System.out.println("Accepted connection from" + client.socket().getInetAddress().getHostAddress()+".");
+
+			//start and initialize state machine
+			state.advance();
+
 		}catch (Exception e){
 			System.out.println("Failed to accept new Client");
 		}
