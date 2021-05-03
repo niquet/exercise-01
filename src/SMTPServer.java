@@ -21,9 +21,9 @@ public class SMTPServer {
 	public SMTPServer(){
 
 		// Load configuration file
-		ConfigHandler serverConfig = new ConfigHandler("./config.properties");
+		ConfigHandler serverConfig = new ConfigHandler("/config.properties");
 		// Cast server port configuration
-		int serverPort = (int) serverConfig.getProperty("SMTP_Server_Port");
+		int serverPort = Integer.parseInt(serverConfig.getProperty("SMTP_Server_Port"));
 
 		//creates Selector and listens on Port 25 for connection
 		try {

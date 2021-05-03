@@ -18,20 +18,23 @@ public class CodingHandler {
 		}
 	}
 
-	public byte[] stringToByteBufer(String s) {
+	public ByteBuffer stringToByteBufer(String s) {
 		byte[] retVal;
 		retVal=s.getBytes(messageCharset);
-		return retVal;
+		ByteBuffer buff = ByteBuffer.allocate(retVal.length);
+		buff.put(retVal);
+		buff.flip();
+		return buff;
 	}
 	
 	//doesnt work
 	public String byteBufferToString(ByteBuffer buff) {
-		CharsetDecoder decoder = this.messageCharset.newDecoder();
+		CharsetDecoder dec = messageCharset.newDecoder();
 		CharBuffer charBuff = null;
 		try {
-			charBuff = decoder.decode(buff);
+			charBuff = dec.decode(buff);
 		} catch (CharacterCodingException e) {
-			System.out.println("Can't decode Buffer");
+			System.out.println("Cant decode Buffer");
 		}
 		return charBuff.toString();
 	}

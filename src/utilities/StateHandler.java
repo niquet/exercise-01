@@ -22,14 +22,14 @@ public class StateHandler {
 		this.state = 0;
 		lastCommand = "";
 	}
-
+/*
 	public setState(int state) {
 
 		// Switch statement for the different states and the command
 		int currentTransition = null;
 
 	}
-	
+*/
 	public int getState() {
 		return state;
 	}
@@ -46,5 +46,14 @@ public class StateHandler {
 	}
 	public void setByteBuffer(ByteBuffer input) {
 		this.ret = input;
+	}
+	public ByteBuffer getByteBuffer() {
+		return this.ret;
+	}
+	public void setReturnFlag(boolean val) {
+		this.returnFlag=val;
+	}
+	public boolean getReturnFlag() {
+		return this.returnFlag;
 	}
 }

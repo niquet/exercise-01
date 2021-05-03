@@ -1,9 +1,8 @@
 package controller;
 
-private Map<String, int> stateMatcher;
-
 public class CommandController {
-
+/*
+    private Map<String, int> stateMatcher;
     public CommandController() {
 
         this.stateMatcher = new HashMap<String, int>;
@@ -26,5 +25,5 @@ public class CommandController {
         return this.stateMatcher.get(unifiedCommand);
 
     }
-
+*/
 }

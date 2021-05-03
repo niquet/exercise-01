@@ -11,7 +11,7 @@ import java.util.Set;
 
 import controller.StagingController;
 import utilities.CodingHandler;
-import utilities.Stage;
+import utilities.StateHandler;
 
 public class Acceptor {
 	private Selector selector;
@@ -34,11 +34,18 @@ public class Acceptor {
 			
 			while(iter.hasNext()) {
 				SelectionKey key = iter.next();
-				
+
 				if(key.isAcceptable()){
 					acceptClient(key);
 				}
-				
+
+				if(key.isWritable()) {
+					StateHandler state = (StateHandler) key.attachment();
+					if(state.getReturnFlag()) {
+						sendToClient(key);
+					}
+				}
+
 				if(key.isReadable()) {
 					printToConsole(key);
 				}
@@ -60,7 +67,7 @@ public class Acceptor {
 			SelectionKey clientKey = client.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 			
 			//create new Stage instance and attach it to client key
-			State state = new State();
+			StateHandler state = new StateHandler();
 			clientKey.attach(state);
 			
 			System.out.println("Accepted connection from" + client.socket().getInetAddress().getHostAddress()+".");
@@ -68,18 +75,37 @@ public class Acceptor {
 			System.out.println("Failed to accept new Client");
 		}
 	}
-	
+
 	//dummy just to get a return to server
 	private void printToConsole(SelectionKey key) throws IOException {
 		SocketChannel client = (SocketChannel) key.channel();
 		System.out.println("Reading...");
-		ByteBuffer buff = ByteBuffer.allocate(1024);
+		ByteBuffer buff = ByteBuffer.allocate(64);
+
+		//reads from client and flips buffer to read
 		client.read(buff);
-		String data = new String(buff.array()).trim();
+		buff.flip();
+
+		//prints to consol
+		String data = coder.byteBufferToString(buff).trim();
 		System.out.println(data);
+
+		//gets Stage from channel and sets vals to return what was sent
+		StateHandler state = (StateHandler) key.attachment();
+		state.setByteBuffer(coder.stringToByteBufer("From Server:"+data));
+		state.setReturnFlag(true);
+
+		//chacks for "exit to close connection"
 		if(data.equalsIgnoreCase("exit")) {
 			client.close();
-            System.out.println("Connection closed...");
+			System.out.println("Connection closed...");
 		}
+	}
+
+	private void sendToClient(SelectionKey key) throws IOException {
+		SocketChannel client = (SocketChannel) key.channel();
+		StateHandler state = (StateHandler) key.attachment();
+		client.write(state.getByteBuffer());
+		state.setReturnFlag(false);
 	}
 }
