@@ -47,7 +47,7 @@ public class Acceptor {
 				}
 
 				if(key.isReadable()) {
-					printToConsole(key);
+					readKey(key);
 				}
 				iter.remove();
 			}
@@ -83,7 +83,7 @@ public class Acceptor {
 	}
 
 	//dummy just to get a return to server
-	private void printToConsole(SelectionKey key) throws IOException {
+	private void readKey(SelectionKey key) throws IOException {
 		SocketChannel client = (SocketChannel) key.channel();
 		System.out.println("Reading...");
 		ByteBuffer buff = ByteBuffer.allocate(256);
@@ -100,9 +100,13 @@ public class Acceptor {
 		StateHandler state = (StateHandler) key.attachment();
 		String reply = state.executeCommand(data);
 
-		state.setByteBuffer(coder.stringToByteBufer(reply));
-		client.write(state.getByteBuffer());
-		state.setReturnFlag(true);
+		if(!reply.equals("")){
+
+			state.setByteBuffer(coder.stringToByteBufer(reply));
+			client.write(state.getByteBuffer());
+			state.setReturnFlag(true);
+
+		}
 
 		//checks for "exit to close connection"
 		if(state.getState().equals("FINISHED")) {

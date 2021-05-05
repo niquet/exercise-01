@@ -2,6 +2,8 @@ package utilities;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+
 import controller.CommandController;
 import utilities.MailHandler;
 
@@ -44,86 +46,173 @@ public class StateHandler {
 
 	}
 
+	public String extractCommand(String data) {
+
+		if(data.startsWith("before")) {
+			return "before";
+		}
+		if(data.startsWith("helo")) {
+			return "helo";
+		}
+		if(data.startsWith("mailfrom")) {
+			return "mailfrom";
+		}
+		if(data.startsWith("rcptto")) {
+			return "rcptto";
+		}
+		if(data.startsWith("data")) {
+			return "data";
+		}
+		if(data.contains("\r\n.\r\n")) {
+			return "\r\n.\r\n";
+		}
+		if(data.startsWith("helphelo")) {
+			return "helphelo";
+		}
+		if(data.startsWith("helpmailfrom")) {
+			return "helpmailfrom";
+		}
+		if(data.startsWith("helprcptto")) {
+			return "helprcptto";
+		}
+		if(data.startsWith("helpdata")) {
+			return "helpdata";
+		}
+		if(data.startsWith("helpquit")) {
+			return "helprcptto";
+		}
+		if(data.startsWith("help")) {
+			return "help";
+		}
+		if(data.startsWith("quit")) {
+			return "quit";
+		}
+
+		return "command unknown";
+
+	}
+
+	public String stripData(String data, String command) {
+
+		String strippedData = new String();
+
+		switch(command) {
+			// case "before":
+			case "helo":
+				strippedData = data.substring(0, data.indexOf(' '));
+				break;
+			case "mailfrom":
+			case "rcptto":
+				strippedData = data.substring(0, data.indexOf(' '));
+				strippedData = strippedData.substring(0, data.indexOf(' '));
+				break;
+			// case "data":
+		}
+
+		return strippedData;
+
+	}
+
 
 	public String executeCommand(String data) throws IOException {
 
 		String currentData = data;
-		String commandBeginning = "";
+		String unifiedData = unifyCommand(data);
 
 		// Extract command from data
-		if (data.contains(" ")) {
-			commandBeginning = unifyCommand(data.substring(0, data.indexOf(' ')));
-		} else {
-			commandBeginning = unifyCommand(data);
+		String command = extractCommand(unifiedData);
+
+		// Check if command is allowed at this state
+		String[] allowedCommands = CommandController.State.valueOf(this.state).allowedCommands();
+		Boolean commandAllowed = Arrays.asList(allowedCommands).contains(command);
+
+		// Send reply if command not allowed
+		if(!commandAllowed && this.state != "RECEIVING_MESSAGE_DATA") {
+			return CommandController.Transition.TRANSITION_BAD_COMMAND_SEQUENCE.getReply();
 		}
 
-		if(this.state.equals("RECEIVING_MESSAGE_DATA")) {
-			if (!commandBeginning.equals("help") && !commandBeginning.equals("quit")) {
-				return "";
-			}
-		}
-
-		String content = data.substring(data.indexOf(' ') + 1);
-		String command, sender, recipient, replyString = null;
+		// Begin processing / executing the commands
+		String strippedData;
+		String sender;
+		String recipient;
+		String replyString = "";
 
 		// Check for kind of command
-		switch(commandBeginning) {
+		switch(command) {
 			// In case of HELO we establish the connection
 			case "before":
-				replyString = controller.makeTransition(commandBeginning);
+				replyString = controller.makeTransition(command);
 				this.state = controller.getState();
 				break;
 			case "helo":
-				replyString = controller.makeTransition(commandBeginning);
+				replyString = controller.makeTransition(command);
 				this.state = controller.getState();
 				break;
-			case "mail":
-				command = unifyCommand(commandBeginning.concat(content.substring(0, content.indexOf(' '))));
-				content = data.substring(content.indexOf(' ') + 1);
-				sender = content.substring(0, content.indexOf(' '));
+			case "mailfrom":
+				strippedData = stripData(currentData, command);
+				if (strippedData.contains(" ")) {
+					sender = strippedData.substring(0, strippedData.indexOf(' '));
+				} else {
+					sender = strippedData;
+				}
 				replyString = controller.makeTransition(command);
 				this.mailHandler.setSender(sender);
 				this.state = controller.getState();
 				break;
-			case "rcpt":
-				command = unifyCommand(commandBeginning.concat(content.substring(0, content.indexOf(' '))));
-				content = data.substring(content.indexOf(' ') + 1);
-				recipient = content.substring(0, content.indexOf(' '));
+			case "rcptto":
+				strippedData = stripData(currentData, command);
+				if (strippedData.contains(" ")) {
+					recipient = strippedData.substring(0, strippedData.indexOf(' '));
+				} else {
+					recipient = strippedData;
+				}
 				replyString = controller.makeTransition(command);
 				this.mailHandler.addRecipient(recipient);
 				this.state = controller.getState();
 				break;
 			case "data":
 				this.mailHandler.addData(data);
-				replyString = controller.makeTransition(commandBeginning);
+				replyString = controller.makeTransition(command);
 				this.state = controller.getState();
 				break;
+			case "helphelo":
+				replyString = CommandController.Transition.TRANSITION_HELP_CONNECT.getReply();
+				break;
+			case "helpmailfrom":
+				replyString = CommandController.Transition.TRANSITION_HELP_MAIL_FROM.getReply();
+				break;
+			case "helprcptto":
+				replyString = CommandController.Transition.TRANSITION_HELP_RCPTTO.getReply();
+				break;
+			case "helpdata":
+				replyString = CommandController.Transition.TRANSITION_HELP_DATA.getReply();
+				break;
+			case "helpquit":
+				replyString = CommandController.Transition.TRANSITION_HELP_QUIT.getReply();
+				break;
 			case "help":
-				replyString = controller.makeTransition(unifyCommand(currentData));
+				replyString = CommandController.Transition.TRANSITION_HELP.getReply();
 				break;
 			case "quit":
-				replyString = controller.makeTransition(commandBeginning);
+				replyString = controller.makeTransition(command);
+				this.state = controller.getState();
 				break;
-				
-				/*
-				if(this.state.equals("MESSAGE_QUEUED")) {
-					replyString = controller.makeTransition(commandBeginning);
-					break;
-				} else {
-					// TODO
-				}
-				*/
-				
-			default:
-				if(currentData.contains("\r\n.\r\n") && this.state == "RECEIVING_MESSAGE_DATA") {
+			case "\r\n.\r\n":
+				if(!currentData.equals("\r\n.\r\n")) {
 					String rawData = currentData.substring(0, currentData.indexOf("\r\n.\r\n"));
 					this.mailHandler.addData(rawData);
-					replyString = controller.makeTransition("\r\n.\r\n");
-					this.state = controller.getState();
-					this.mailHandler.store();
-					this.mailHandler.clearMailHandlerData();
+				}
+				this.state = controller.getState();
+				this.mailHandler.store();
+				this.mailHandler.clearMailHandlerData();
+				replyString = controller.makeTransition("\r\n.\r\n");
+				break;
+			default:
+				if(this.state == "RECEIVING_MESSAGE_DATA") {
 					break;
 				}
+				replyString = CommandController.Transition.TRANSITION_COMMAND_NOT_IMPLEMENTED.getReply();
+				break;
 		}
 
 		return replyString;

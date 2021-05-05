@@ -34,7 +34,9 @@ public class CommandController {
         TRANSITION_QUIT_SUCCESS,
         // TRANSITION_QUIT_ERROR,
         TRANSITION_HELP_QUIT,
-        TRANSITION_HELP;
+        TRANSITION_HELP,
+        TRANSITION_BAD_COMMAND_SEQUENCE,
+        TRANSITION_COMMAND_NOT_IMPLEMENTED;
 
         public String getReply() {
 
@@ -47,7 +49,7 @@ public class CommandController {
                     break;
                 case TRANSITION_CONNECT_FAILURE:
                     reply = "421 <domain> Service not available,\n" +
-                           "closing transmission channel\n";
+                           "closing transmission channel";
                     break;
                 case TRANSITION_HELP_CONNECT:
                     // HELP HELO
@@ -55,7 +57,7 @@ public class CommandController {
                             "HELO <SP> <domain> <CRLF>\n\n" +
                            "In the HELO command the host sending the command identifies\n" +
                            " itself; the command may be interpreted as saying \"Hello, I am\n" +
-                           " <domain>\"\n";
+                           " <domain>\"";
                     break;
                 case TRANSITION_HELO_SUCCESS:
                 case TRANSITION_MAIL_FROM_SUCCESS:
@@ -65,7 +67,7 @@ public class CommandController {
                     // MAIL <SP> FROM:<reverse-path> <CRLF>
                     // RCPT <SP> TO:<forward-path> <CRLF>
                     // DATA <CRLF> ... <CRLF>.<CRLF>
-                    reply = "250 OK\n";
+                    reply = "250 OK";
                     break;
                 // case TRANSITION_MAIL_FROM_ERROR:
                     // TODO
@@ -83,7 +85,7 @@ public class CommandController {
                             "The <reverse-path> can contain more than just a mailbox. The\n" +
                             "<reverse-path> is a reverse source routing list of hosts and\n" +
                             "source mailbox. The first host in the <reverse-path> should be\n" +
-                            "the host sending this command.\n";
+                            "the host sending this command.";
                     break;
                 // case TRANSITION_RCPT_TO_ERROR:
                     // TODO
@@ -102,10 +104,10 @@ public class CommandController {
                             "The <forward-path> can contain more than just a mailbox. The\n" +
                             "<forward-path> is a source routing list of hosts and the\n" +
                             "destination mailbox. The first host in the <forward-path>\n" +
-                            "should be the host receiving this command.\n";
+                            "should be the host receiving this command.";
                     break;
                 case TRANSITION_DATA_INTERMEDIATE:
-                    reply = "354 Start mail input; end with <CRLF>.<CRLF>\n";
+                    reply = "354 Start mail input; end with <CRLF>.<CRLF>";
                     break;
                 // case TRANSITION_DATA_ERROR:
                     // TODO
@@ -122,7 +124,7 @@ public class CommandController {
                             "Since the mail data is sent on the transmission channel the end\n" +
                             "of the mail data must be indicated so that the command and\n" +
                             "reply dialog can be resumed. SMTP indicates the end of the\n" +
-                            "mail data by sending a line containing only a period.\n";
+                            "mail data by sending a line containing only a period.";
                     break;
                 /*
                  case TRANSITION_QUEUE_MESSAGE_SUCCESS:
@@ -131,7 +133,7 @@ public class CommandController {
                  case TRANSITION_HELP_QUEUE_MESSAGE:
                 */
                 case TRANSITION_QUIT_SUCCESS:
-                    reply = "221 <domain> Service closing transmission channel\n";
+                    reply = "221 <domain> Service closing transmission channel";
                     break;
                 // case TRANSITION_QUIT_ERROR:
                 case TRANSITION_HELP_QUIT:
@@ -149,7 +151,7 @@ public class CommandController {
                            "pending transaction, but not undoing any previously\n" +
                            "completed transaction), the sender should act as if the\n" +
                            "command or transaction in progress had received a temporary\n" +
-                           "error (4xx).\n";
+                           "error (4xx).";
                     break;
                 case TRANSITION_HELP:
                     reply = "214 Help message\n\n" +
@@ -158,7 +160,13 @@ public class CommandController {
                             "RCPT <SP> TO:<forward-path> <CRLF>\n" +
                             "DATA <CRLF>\n" +
                             "HELP [<SP> <string>] <CRLF>\n" +
-                            "QUIT <CRLF>\n";
+                            "QUIT <CRLF>";
+                    break;
+                case TRANSITION_COMMAND_NOT_IMPLEMENTED:
+                    reply = "502 Command not implemented";
+                    break;
+                case TRANSITION_BAD_COMMAND_SEQUENCE:
+                    reply = "503 Bad sequence of commands";
                     break;
             }
 
@@ -178,6 +186,38 @@ public class CommandController {
         RECEIVING_MESSAGE_DATA,
         MESSAGE_QUEUED,
         FINISHED;
+
+        public String[] allowedCommands() {
+
+            String[] allowed = new String[10];
+
+            switch(this) {
+                case BEFORE:
+                    allowed = new String[]{"before"};
+                    break;
+                case IDLE:
+                    allowed = new String[]{"helo", "help", "helpmailfrom", "helprcptto", "helpdata", "helpquit"};
+                    break;
+                case CONNECTED:
+                    allowed = new String[]{"mailfrom", "help", "helpmailfrom", "helprcptto", "helpdata", "helpquit", "quit"};
+                    break;
+                case SENDER_APPROVED:
+                    allowed = new String[]{"rcptto", "help", "helpmailfrom", "helprcptto", "helpdata", "helpquit", "quit"};
+                    break;
+                case RECIPIENTS_APPROVED:
+                    allowed = new String[]{"data", "rcptto", "help", "helpmailfrom", "helprcptto", "helpdata", "helpquit", "quit"};
+                    break;
+                case RECEIVING_MESSAGE_DATA:
+                    allowed = new String[]{"\r\n.\r\n", "help", "helpmailfrom", "helprcptto", "helpdata", "helpquit", "quit"};
+                    break;
+                case MESSAGE_QUEUED:
+                    allowed = new String[]{"mailfrom", "help", "helpmailfrom", "helprcptto", "helpdata", "helpquit", "quit"};
+                    break;
+            }
+
+            return allowed;
+
+        }
 
     }
 
@@ -226,7 +266,6 @@ public class CommandController {
         Map<Transition, State> recipientsApproved = new HashMap<>();
         recipientsApproved.put(Transition.TRANSITION_RCPT_TO_SUCCESS, State.RECIPIENTS_APPROVED);
         recipientsApproved.put(Transition.TRANSITION_DATA_INTERMEDIATE, State.RECEIVING_MESSAGE_DATA);
-        recipientsApproved.put(Transition.TRANSITION_HELP_MAIL_FROM, State.RECIPIENTS_APPROVED);
         recipientsApproved.put(Transition.TRANSITION_QUIT_SUCCESS, State.FINISHED);
 
         Map<Transition, State> receivingMessageData = new HashMap<>();
@@ -261,32 +300,6 @@ public class CommandController {
 
         Transition currentTransition;
         String reply = "";
-
-        String commandFirstFourChars = command.substring(0, 4);
-        if (commandFirstFourChars.equals("help")) {
-
-            switch (command) {
-                case "helphelo":
-                    reply = Transition.TRANSITION_HELP_CONNECT.getReply();
-                    return reply;
-                case "helpmailfrom":
-                    reply = Transition.TRANSITION_HELP_MAIL_FROM.getReply();
-                    return reply;
-                case "helprcptto":
-                    reply = Transition.TRANSITION_HELP_RCPTTO.getReply();
-                    return reply;
-                case "helpdata":
-                    reply = Transition.TRANSITION_HELP_DATA.getReply();
-                    return reply;
-                case "helpquit":
-                    reply = Transition.TRANSITION_HELP_QUIT.getReply();
-                    return reply;
-                default:
-                    reply = Transition.TRANSITION_HELP.getReply();
-                    return reply;
-            }
-
-        }
 
         switch (this.state) {
             case BEFORE:
