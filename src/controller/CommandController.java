@@ -14,6 +14,7 @@ public class CommandController {
         TRANSITION_CONNECT_SUCCESS,
         TRANSITION_CONNECT_FAILURE,
         TRANSITION_HELP_CONNECT,
+        TRANSITION_HELO_SUCCESS,
         TRANSITION_MAIL_FROM_SUCCESS,
         TRANSITION_MAIL_FROM_ERROR,
         TRANSITION_MAIL_FROM_FAILURE,
@@ -56,6 +57,7 @@ public class CommandController {
                            " itself; the command may be interpreted as saying \"Hello, I am\n" +
                            " <domain>\"\n";
                     break;
+                case TRANSITION_HELO_SUCCESS:
                 case TRANSITION_MAIL_FROM_SUCCESS:
                 case TRANSITION_RCPT_TO_SUCCESS:
                 case TRANSITION_DATA_SUCCESS:
@@ -65,9 +67,9 @@ public class CommandController {
                     // DATA <CRLF> ... <CRLF>.<CRLF>
                     reply = "250 OK\n";
                     break;
-                case TRANSITION_MAIL_FROM_ERROR:
+                // case TRANSITION_MAIL_FROM_ERROR:
                     // TODO
-                case TRANSITION_MAIL_FROM_FAILURE:
+                // case TRANSITION_MAIL_FROM_FAILURE:
                     // TODO
                 case TRANSITION_HELP_MAIL_FROM:
                     // HELP MAIL FROM
@@ -83,7 +85,7 @@ public class CommandController {
                             "source mailbox. The first host in the <reverse-path> should be\n" +
                             "the host sending this command.\n";
                     break;
-                case TRANSITION_RCPT_TO_ERROR:
+                // case TRANSITION_RCPT_TO_ERROR:
                     // TODO
                 case TRANSITION_RCPT_TO_FAILURE:
                     reply = "550 Requested action not taken: mailbox unavailable\n";
@@ -105,9 +107,9 @@ public class CommandController {
                 case TRANSITION_DATA_INTERMEDIATE:
                     reply = "354 Start mail input; end with <CRLF>.<CRLF>\n";
                     break;
-                case TRANSITION_DATA_ERROR:
+                // case TRANSITION_DATA_ERROR:
                     // TODO
-                case TRANSITION_DATA_FAILURE:
+                // case TRANSITION_DATA_FAILURE:
                     // TODO
                 case TRANSITION_HELP_DATA:
                     // HELP DATA
@@ -168,12 +170,14 @@ public class CommandController {
 
     public enum State {
 
+        BEFORE,
         IDLE,
         CONNECTED,
         SENDER_APPROVED,
         RECIPIENTS_APPROVED,
         RECEIVING_MESSAGE_DATA,
-        MESSAGE_QUEUED;
+        MESSAGE_QUEUED,
+        FINISHED;
 
     }
 
@@ -194,44 +198,50 @@ public class CommandController {
         // QUIT <CRLF>
         // TURN <CRLF>
 
-        this.state = State.IDLE;
+        this.state = State.BEFORE;
 
         fsm = new HashMap<>();
 
+        Map<Transition, State> before = new HashMap<>();
+        before.put(Transition.TRANSITION_CONNECT_SUCCESS, State.IDLE);
+        before.put(Transition.TRANSITION_CONNECT_FAILURE, State.BEFORE);
+        before.put(Transition.TRANSITION_QUIT_SUCCESS, State.FINISHED);
+
         Map<Transition, State> idle = new HashMap<>();
-        idle.put(Transition.TRANSITION_CONNECT_SUCCESS, State.CONNECTED);
-        idle.put(Transition.TRANSITION_CONNECT_FAILURE, State.IDLE);
-        idle.put(Transition.TRANSITION_QUIT_SUCCESS, State.IDLE);
+        idle.put(Transition.TRANSITION_HELO_SUCCESS, State.CONNECTED);
+        idle.put(Transition.TRANSITION_QUIT_SUCCESS, State.FINISHED);
 
         Map<Transition, State> connected = new HashMap<>();
         connected.put(Transition.TRANSITION_MAIL_FROM_SUCCESS, State.SENDER_APPROVED);
         connected.put(Transition.TRANSITION_MAIL_FROM_ERROR, State.CONNECTED);
         connected.put(Transition.TRANSITION_MAIL_FROM_FAILURE, State.CONNECTED);
-        connected.put(Transition.TRANSITION_QUIT_SUCCESS, State.IDLE);
+        connected.put(Transition.TRANSITION_QUIT_SUCCESS, State.FINISHED);
 
         Map<Transition, State> senderApproved = new HashMap<>();
         senderApproved.put(Transition.TRANSITION_RCPT_TO_SUCCESS, State.RECIPIENTS_APPROVED);
         senderApproved.put(Transition.TRANSITION_RCPT_TO_ERROR, State.SENDER_APPROVED);
         senderApproved.put(Transition.TRANSITION_RCPT_TO_FAILURE, State.SENDER_APPROVED);
-        senderApproved.put(Transition.TRANSITION_QUIT_SUCCESS, State.IDLE);
+        senderApproved.put(Transition.TRANSITION_QUIT_SUCCESS, State.FINISHED);
 
         Map<Transition, State> recipientsApproved = new HashMap<>();
+        recipientsApproved.put(Transition.TRANSITION_RCPT_TO_SUCCESS, State.RECIPIENTS_APPROVED);
         recipientsApproved.put(Transition.TRANSITION_DATA_INTERMEDIATE, State.RECEIVING_MESSAGE_DATA);
         recipientsApproved.put(Transition.TRANSITION_HELP_MAIL_FROM, State.RECIPIENTS_APPROVED);
-        recipientsApproved.put(Transition.TRANSITION_QUIT_SUCCESS, State.IDLE);
+        recipientsApproved.put(Transition.TRANSITION_QUIT_SUCCESS, State.FINISHED);
 
         Map<Transition, State> receivingMessageData = new HashMap<>();
         receivingMessageData.put(Transition.TRANSITION_DATA_SUCCESS, State.MESSAGE_QUEUED);
         receivingMessageData.put(Transition.TRANSITION_DATA_INTERMEDIATE, State.RECEIVING_MESSAGE_DATA);
         receivingMessageData.put(Transition.TRANSITION_DATA_ERROR, State.RECEIVING_MESSAGE_DATA);
         receivingMessageData.put(Transition.TRANSITION_DATA_FAILURE, State.RECEIVING_MESSAGE_DATA);
-        receivingMessageData.put(Transition.TRANSITION_QUIT_SUCCESS, State.IDLE);
+        receivingMessageData.put(Transition.TRANSITION_QUIT_SUCCESS, State.FINISHED);
 
         Map<Transition, State> messageQueued = new HashMap<>();
         messageQueued.put(Transition.TRANSITION_MAIL_FROM_SUCCESS, State.SENDER_APPROVED);
         messageQueued.put(Transition.TRANSITION_MAIL_FROM_ERROR, State.MESSAGE_QUEUED);
-        messageQueued.put(Transition.TRANSITION_QUIT_SUCCESS, State.IDLE);
+        messageQueued.put(Transition.TRANSITION_QUIT_SUCCESS, State.FINISHED);
 
+        fsm.put(State.BEFORE, before);
         fsm.put(State.IDLE, idle);
         fsm.put(State.CONNECTED, connected);
         fsm.put(State.SENDER_APPROVED, senderApproved);
@@ -279,19 +289,29 @@ public class CommandController {
         }
 
         switch (this.state) {
+            case BEFORE:
+                currentTransition = Transition.TRANSITION_CONNECT_SUCCESS;
+                reply = currentTransition.getReply();
+                this.state = fsm.get(this.state).get(currentTransition);
+                break;
             case IDLE:
                 if (command.equals("helo")) {
 
-                    currentTransition = Transition.TRANSITION_CONNECT_SUCCESS;
+                    currentTransition = Transition.TRANSITION_HELO_SUCCESS;
                     reply = currentTransition.getReply();
-                    CommandController.this.state = fsm.get(this.state).get(currentTransition);
+                    this.state = fsm.get(this.state).get(currentTransition);
                     break;
 
+                } else if (command.equals("quit")) {
+                    currentTransition = Transition.TRANSITION_QUIT_SUCCESS;
+                    reply = currentTransition.getReply();
+                    this.state = fsm.get(this.state).get(currentTransition);
+                    break;
                 } else {
 
                     currentTransition = Transition.TRANSITION_CONNECT_FAILURE;
                     reply = currentTransition.getReply();
-                    CommandController.this.state = fsm.get(this.state).get(currentTransition);
+                    this.state = fsm.get(this.state).get(currentTransition);
                     break;
 
                 }
@@ -300,14 +320,19 @@ public class CommandController {
 
                     currentTransition = Transition.TRANSITION_MAIL_FROM_SUCCESS;
                     reply = currentTransition.getReply();
-                    CommandController.this.state = fsm.get(this.state).get(currentTransition);
+                    this.state = fsm.get(this.state).get(currentTransition);
                     break;
 
+                } else if (command.equals("quit")) {
+                    currentTransition = Transition.TRANSITION_QUIT_SUCCESS;
+                    reply = currentTransition.getReply();
+                    this.state = fsm.get(this.state).get(currentTransition);
+                    break;
                 } else {
 
                     currentTransition = Transition.TRANSITION_MAIL_FROM_ERROR;
                     reply = currentTransition.getReply();
-                    CommandController.this.state = fsm.get(this.state).get(currentTransition);
+                    this.state = fsm.get(this.state).get(currentTransition);
                     break;
 
                 }
@@ -316,14 +341,20 @@ public class CommandController {
 
                     currentTransition = Transition.TRANSITION_RCPT_TO_SUCCESS;
                     reply = currentTransition.getReply();
-                    CommandController.this.state = fsm.get(this.state).get(currentTransition);
+                    this.state = fsm.get(this.state).get(currentTransition);
+                    break;
+
+                } else if (command.equals("quit")) {
+                    currentTransition = Transition.TRANSITION_QUIT_SUCCESS;
+                    reply = currentTransition.getReply();
+                    this.state = fsm.get(this.state).get(currentTransition);
                     break;
 
                 } else {
 
                     currentTransition = Transition.TRANSITION_RCPT_TO_FAILURE;
                     reply = currentTransition.getReply();
-                    CommandController.this.state = fsm.get(this.state).get(currentTransition);
+                    this.state = fsm.get(this.state).get(currentTransition);
                     break;
 
                 }
@@ -332,30 +363,47 @@ public class CommandController {
 
                     currentTransition = Transition.TRANSITION_DATA_INTERMEDIATE;
                     reply = currentTransition.getReply();
-                    CommandController.this.state = fsm.get(this.state).get(currentTransition);
+                    this.state = fsm.get(this.state).get(currentTransition);
+                    break;
+
+                } else if (command.equals("rcptto")) {
+
+                    currentTransition = Transition.TRANSITION_RCPT_TO_SUCCESS;
+                    reply = currentTransition.getReply();
+                    this.state = fsm.get(this.state).get(currentTransition);
+                    break;
+
+                } else if (command.equals("quit")) {
+                    currentTransition = Transition.TRANSITION_QUIT_SUCCESS;
+                    reply = currentTransition.getReply();
+                    this.state = fsm.get(this.state).get(currentTransition);
                     break;
 
                 } else {
 
                     currentTransition = Transition.TRANSITION_RCPT_TO_FAILURE;
                     reply = currentTransition.getReply();
-                    CommandController.this.state = fsm.get(this.state).get(currentTransition);
+                    this.state = fsm.get(this.state).get(currentTransition);
                     break;
 
                 }
             case RECEIVING_MESSAGE_DATA:
-                if (command.equals("<CR>.<CR>")) {
+                if (command.contains("\r\n.\r\n")) {
 
                     currentTransition = Transition.TRANSITION_DATA_SUCCESS;
                     reply = currentTransition.getReply();
-                    CommandController.this.state = fsm.get(this.state).get(currentTransition);
+                    this.state = fsm.get(this.state).get(currentTransition);
+                    break;
+
+                } else if (command.equals("quit")) {
+                    currentTransition = Transition.TRANSITION_QUIT_SUCCESS;
+                    reply = currentTransition.getReply();
+                    this.state = fsm.get(this.state).get(currentTransition);
                     break;
 
                 } else {
 
-                    currentTransition = Transition.TRANSITION_RCPT_TO_FAILURE;
-                    reply = currentTransition.getReply();
-                    CommandController.this.state = fsm.get(this.state).get(currentTransition);
+                    reply = "SHIT";
                     break;
 
                 }

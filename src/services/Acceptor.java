@@ -72,8 +72,10 @@ public class Acceptor {
 			
 			System.out.println("Accepted connection from" + client.socket().getInetAddress().getHostAddress()+".");
 
-			// Get IDLE server reply
-			// state.co
+			// Get BEFORE server reply
+			String reply = state.executeCommand("before");
+			state.setByteBuffer(coder.stringToByteBufer(reply));
+			client.write(state.getByteBuffer());
 
 		}catch (Exception e){
 			System.out.println("Failed to accept new Client");
@@ -103,7 +105,7 @@ public class Acceptor {
 		state.setReturnFlag(true);
 
 		//checks for "exit to close connection"
-		if(data.equalsIgnoreCase("exit")) {
+		if(state.getState().equals("FINISHED")) {
 			client.close();
 			System.out.println("Connection closed...");
 		}

@@ -27,6 +27,7 @@ public class StateHandler {
 	public StateHandler() {
 
 		this.controller = new CommandController();
+		this.mailHandler = new MailHandler();
 		// IDLE,
 		// CONNECTED,
 		// SENDER_APPROVED,
@@ -47,15 +48,31 @@ public class StateHandler {
 	public String executeCommand(String data) throws IOException {
 
 		String currentData = data;
+		String commandBeginning = "";
 
 		// Extract command from data
-		String commandBeginning = unifyCommand(data.substring(0, data.indexOf(' ')));
+		if (data.contains(" ")) {
+			commandBeginning = unifyCommand(data.substring(0, data.indexOf(' ')));
+		} else {
+			commandBeginning = unifyCommand(data);
+		}
+
+		if(this.state.equals("RECEIVING_MESSAGE_DATA")) {
+			if (!commandBeginning.equals("help") && !commandBeginning.equals("quit")) {
+				return "";
+			}
+		}
+
 		String content = data.substring(data.indexOf(' ') + 1);
 		String command, sender, recipient, replyString = null;
 
 		// Check for kind of command
 		switch(commandBeginning) {
 			// In case of HELO we establish the connection
+			case "before":
+				replyString = controller.makeTransition(commandBeginning);
+				this.state = controller.getState();
+				break;
 			case "helo":
 				replyString = controller.makeTransition(commandBeginning);
 				this.state = controller.getState();
@@ -65,7 +82,7 @@ public class StateHandler {
 				content = data.substring(content.indexOf(' ') + 1);
 				sender = content.substring(0, content.indexOf(' '));
 				replyString = controller.makeTransition(command);
-				mailHandler.setSender(sender);
+				this.mailHandler.setSender(sender);
 				this.state = controller.getState();
 				break;
 			case "rcpt":
@@ -73,11 +90,11 @@ public class StateHandler {
 				content = data.substring(content.indexOf(' ') + 1);
 				recipient = content.substring(0, content.indexOf(' '));
 				replyString = controller.makeTransition(command);
-				mailHandler.addRecipient(recipient);
+				this.mailHandler.addRecipient(recipient);
 				this.state = controller.getState();
 				break;
 			case "data":
-				mailHandler.addData(data);
+				this.mailHandler.addData(data);
 				replyString = controller.makeTransition(commandBeginning);
 				this.state = controller.getState();
 				break;
@@ -100,11 +117,11 @@ public class StateHandler {
 			default:
 				if(currentData.contains("\r\n.\r\n") && this.state == "RECEIVING_MESSAGE_DATA") {
 					String rawData = currentData.substring(0, currentData.indexOf("\r\n.\r\n"));
-					mailHandler.addData(rawData);
-					replyString = controller.makeTransition("<CR>.<CR>");
+					this.mailHandler.addData(rawData);
+					replyString = controller.makeTransition("\r\n.\r\n");
 					this.state = controller.getState();
-					mailHandler.store();
-					mailHandler.clearMailHandlerData();
+					this.mailHandler.store();
+					this.mailHandler.clearMailHandlerData();
 					break;
 				}
 		}
