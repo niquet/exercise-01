@@ -112,10 +112,12 @@ public class CommandController {
                             "reply dialog can be resumed. SMTP indicates the end of the\n" +
                             "mail data by sending a line containing only a period.\n";
                     break;
-                // case TRANSITION_QUEUE_MESSAGE_SUCCESS:
-                // case TRANSITION_QUEUE_MESSAGE_ERROR:
-                // case TRANSITION_QUEUE_MESSAGE_FAILURE:
-                // case TRANSITION_HELP_QUEUE_MESSAGE:
+                /*
+                 case TRANSITION_QUEUE_MESSAGE_SUCCESS:
+                 case TRANSITION_QUEUE_MESSAGE_ERROR:
+                 case TRANSITION_QUEUE_MESSAGE_FAILURE:
+                 case TRANSITION_HELP_QUEUE_MESSAGE:
+                */
                 case TRANSITION_QUIT_SUCCESS:
                     reply = "221 <domain> Service closing transmission channel\n";
                     break;
