@@ -13,24 +13,17 @@ public class StateHandler {
 	// x - \r\n.\r\n recevied (probably going back to state 1)
 	// x - HELP received (can be ignored here, only relevant for the CommandController
 	// x - QUIT received (should only be used to kill a StateHandler object when used)
-	private int state;
+	private String state;
 	private String lastCommand;
 	private ByteBuffer ret;
 	private boolean returnFlag;
 	
 	public StateHandler() {
-		this.state = 0;
+		this.state = "";
 		lastCommand = "";
 	}
-/*
-	public setState(int state) {
 
-		// Switch statement for the different states and the command
-		int currentTransition = null;
-
-	}
-*/
-	public int getState() {
+	public String getState() {
 		return state;
 	}
 	
