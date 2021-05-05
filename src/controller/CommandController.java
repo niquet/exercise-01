@@ -5,6 +5,10 @@ import java.util.Map;
 
 public class CommandController {
 
+    // private Map<Integer, String> replyCodes;
+    private static Map<State, Map<Transition, State>> fsm;
+    private State state;
+
     public enum Transition {
 
         TRANSITION_CONNECT_SUCCESS,
@@ -23,13 +27,13 @@ public class CommandController {
         TRANSITION_DATA_ERROR,
         TRANSITION_DATA_FAILURE,
         TRANSITION_HELP_DATA,
-        // TRANSITION_QUEUE_MESSAGE_SUCCESS,
-        // TRANSITION_QUEUE_MESSAGE_ERROR,
+        TRANSITION_QUEUE_MESSAGE_SUCCESS,
+        TRANSITION_QUEUE_MESSAGE_ERROR,
         // TRANSITION_QUEUE_MESSAGE_FAILURE,
-        // TRANSITION_HELP_QUEUE_MESSAGE,
         TRANSITION_QUIT_SUCCESS,
         // TRANSITION_QUIT_ERROR,
-        TRANSITION_HELP_QUIT;
+        TRANSITION_HELP_QUIT,
+        TRANSITION_HELP;
 
         public String getReply() {
 
@@ -55,13 +59,16 @@ public class CommandController {
                 case TRANSITION_MAIL_FROM_SUCCESS:
                 case TRANSITION_RCPT_TO_SUCCESS:
                 case TRANSITION_DATA_SUCCESS:
+                case TRANSITION_QUEUE_MESSAGE_SUCCESS:
                     // MAIL <SP> FROM:<reverse-path> <CRLF>
                     // RCPT <SP> TO:<forward-path> <CRLF>
                     // DATA <CRLF> ... <CRLF>.<CRLF>
                     reply = "250 OK\n";
                     break;
                 case TRANSITION_MAIL_FROM_ERROR:
+                    // TODO
                 case TRANSITION_MAIL_FROM_FAILURE:
+                    // TODO
                 case TRANSITION_HELP_MAIL_FROM:
                     // HELP MAIL FROM
                     reply = "214 Help message\n\n" +
@@ -77,6 +84,7 @@ public class CommandController {
                             "the host sending this command.\n";
                     break;
                 case TRANSITION_RCPT_TO_ERROR:
+                    // TODO
                 case TRANSITION_RCPT_TO_FAILURE:
                     reply = "550 Requested action not taken: mailbox unavailable\n";
                     break;
@@ -98,7 +106,9 @@ public class CommandController {
                     reply = "354 Start mail input; end with <CRLF>.<CRLF>\n";
                     break;
                 case TRANSITION_DATA_ERROR:
+                    // TODO
                 case TRANSITION_DATA_FAILURE:
+                    // TODO
                 case TRANSITION_HELP_DATA:
                     // HELP DATA
                     reply = "214 Help message\n\n" +
@@ -139,6 +149,15 @@ public class CommandController {
                            "command or transaction in progress had received a temporary\n" +
                            "error (4xx).\n";
                     break;
+                case TRANSITION_HELP:
+                    reply = "214 Help message\n\n" +
+                            "HELO <SP> <domain> <CRLF>\n" +
+                            "MAIL <SP> FROM:<reverse-path> <CRLF>\n" +
+                            "RCPT <SP> TO:<forward-path> <CRLF>\n" +
+                            "DATA <CRLF>\n" +
+                            "HELP [<SP> <string>] <CRLF>\n" +
+                            "QUIT <CRLF>\n";
+                    break;
             }
 
             return reply;
@@ -153,93 +172,10 @@ public class CommandController {
         CONNECTED,
         SENDER_APPROVED,
         RECIPIENTS_APPROVED,
-        RECEIVING_MESSAGE_DATA;
+        RECEIVING_MESSAGE_DATA,
+        MESSAGE_QUEUED;
 
-        public Transition statusToTransition(String status) {
-
-            Transition transition = Transition.TRANSITION_HELP_CONNECT;
-
-            switch(this) {
-                case IDLE:
-                    if(status.equals("SUCCESS")) {
-                        transition = Transition.TRANSITION_CONNECT_SUCCESS;
-                        break;
-                    }
-                    if(status.equals("FAILURE")) {
-                        transition = Transition.TRANSITION_CONNECT_FAILURE;
-                    }
-                    if(status.equals("HELP")) {
-                        break;
-                    }
-                case CONNECTED:
-                    if(status.equals("SUCCESS")) {
-                        transition = Transition.TRANSITION_MAIL_FROM_SUCCESS;
-                        break;
-                    }
-                    if(status.equals("ERROR")) {
-                        transition = Transition.TRANSITION_MAIL_FROM_ERROR;
-                    }
-                    if(status.equals("FAILURE")) {
-                        transition = Transition.TRANSITION_MAIL_FROM_FAILURE;
-                    }
-                    if(status.equals("HELP")) {
-                        transition = Transition.TRANSITION_HELP_MAIL_FROM;
-                        break;
-                    }
-                case SENDER_APPROVED:
-                    if(status.equals("SUCCESS")) {
-                        transition = Transition.TRANSITION_RCPT_TO_SUCCESS;
-                        break;
-                    }
-                    if(status.equals("ERROR")) {
-                        transition = Transition.TRANSITION_RCPT_TO_ERROR;
-                    }
-                    if(status.equals("FAILURE")) {
-                        transition = Transition.TRANSITION_RCPT_TO_FAILURE;
-                    }
-                    if(status.equals("HELP")) {
-                        transition = Transition.TRANSITION_HELP_RCPTTO;
-                        break;
-                    }
-                case RECIPIENTS_APPROVED:
-                    if(status.equals("SUCCESS")) {
-                        transition = Transition.TRANSITION_DATA_INTERMEDIATE;
-                        break;
-                    }
-                    if(status.equals("HELP")) {
-                        transition = Transition.TRANSITION_HELP_DATA;
-                        break;
-                    }
-                case RECEIVING_MESSAGE_DATA:
-                    if(status.equals("SUCCESS")) {
-                        transition = Transition.TRANSITION_DATA_SUCCESS;
-                        break;
-                    }
-                    if(status.equals("INTERMEDIATE")) {
-                        transition = Transition.TRANSITION_DATA_INTERMEDIATE;
-                        break;
-                    }
-                    if(status.equals("ERROR")) {
-                        transition = Transition.TRANSITION_DATA_ERROR;
-                    }
-                    if(status.equals("FAILURE")) {
-                        transition = Transition.TRANSITION_DATA_FAILURE;
-                    }
-                    if(status.equals("HELP")) {
-                        transition = Transition.TRANSITION_HELP_DATA;
-                        break;
-                    }
-            }
-
-            return transition;
-
-        }
-
-    };
-
-    private Map<Integer, String> replyCodes;
-    private Map<State, Map<Transition, State>> fsm;
-    public State state;
+    }
 
     public CommandController() {
 
@@ -265,114 +201,169 @@ public class CommandController {
         Map<Transition, State> idle = new HashMap<>();
         idle.put(Transition.TRANSITION_CONNECT_SUCCESS, State.CONNECTED);
         idle.put(Transition.TRANSITION_CONNECT_FAILURE, State.IDLE);
-        idle.put(Transition.TRANSITION_HELP_CONNECT, State.IDLE);
-        idle.put(Transition.TRANSITION_HELP_MAIL_FROM, State.IDLE);
-        idle.put(Transition.TRANSITION_HELP_RCPTTO, State.IDLE);
-        idle.put(Transition.TRANSITION_HELP_DATA, State.IDLE);
-        idle.put(Transition.TRANSITION_HELP_QUIT, State.IDLE);
         idle.put(Transition.TRANSITION_QUIT_SUCCESS, State.IDLE);
 
         Map<Transition, State> connected = new HashMap<>();
         connected.put(Transition.TRANSITION_MAIL_FROM_SUCCESS, State.SENDER_APPROVED);
         connected.put(Transition.TRANSITION_MAIL_FROM_ERROR, State.CONNECTED);
         connected.put(Transition.TRANSITION_MAIL_FROM_FAILURE, State.CONNECTED);
-        connected.put(Transition.TRANSITION_HELP_MAIL_FROM, State.CONNECTED);
-        connected.put(Transition.TRANSITION_HELP_RCPTTO, State.CONNECTED);
-        connected.put(Transition.TRANSITION_HELP_DATA, State.CONNECTED);
-        connected.put(Transition.TRANSITION_HELP_QUIT, State.CONNECTED);
         connected.put(Transition.TRANSITION_QUIT_SUCCESS, State.IDLE);
 
         Map<Transition, State> senderApproved = new HashMap<>();
         senderApproved.put(Transition.TRANSITION_RCPT_TO_SUCCESS, State.RECIPIENTS_APPROVED);
         senderApproved.put(Transition.TRANSITION_RCPT_TO_ERROR, State.SENDER_APPROVED);
         senderApproved.put(Transition.TRANSITION_RCPT_TO_FAILURE, State.SENDER_APPROVED);
-        senderApproved.put(Transition.TRANSITION_HELP_MAIL_FROM, State.SENDER_APPROVED);
-        senderApproved.put(Transition.TRANSITION_HELP_RCPTTO, State.SENDER_APPROVED);
-        senderApproved.put(Transition.TRANSITION_HELP_DATA, State.SENDER_APPROVED);
-        senderApproved.put(Transition.TRANSITION_HELP_QUIT, State.SENDER_APPROVED);
         senderApproved.put(Transition.TRANSITION_QUIT_SUCCESS, State.IDLE);
 
         Map<Transition, State> recipientsApproved = new HashMap<>();
         recipientsApproved.put(Transition.TRANSITION_DATA_INTERMEDIATE, State.RECEIVING_MESSAGE_DATA);
         recipientsApproved.put(Transition.TRANSITION_HELP_MAIL_FROM, State.RECIPIENTS_APPROVED);
-        recipientsApproved.put(Transition.TRANSITION_HELP_RCPTTO, State.RECIPIENTS_APPROVED);
-        recipientsApproved.put(Transition.TRANSITION_HELP_DATA, State.RECIPIENTS_APPROVED);
-        recipientsApproved.put(Transition.TRANSITION_HELP_QUIT, State.RECIPIENTS_APPROVED);
         recipientsApproved.put(Transition.TRANSITION_QUIT_SUCCESS, State.IDLE);
 
         Map<Transition, State> receivingMessageData = new HashMap<>();
-        receivingMessageData.put(Transition.TRANSITION_DATA_SUCCESS, State.CONNECTED);
+        receivingMessageData.put(Transition.TRANSITION_DATA_SUCCESS, State.MESSAGE_QUEUED);
         receivingMessageData.put(Transition.TRANSITION_DATA_INTERMEDIATE, State.RECEIVING_MESSAGE_DATA);
         receivingMessageData.put(Transition.TRANSITION_DATA_ERROR, State.RECEIVING_MESSAGE_DATA);
         receivingMessageData.put(Transition.TRANSITION_DATA_FAILURE, State.RECEIVING_MESSAGE_DATA);
-        receivingMessageData.put(Transition.TRANSITION_HELP_MAIL_FROM, State.RECEIVING_MESSAGE_DATA);
-        receivingMessageData.put(Transition.TRANSITION_HELP_RCPTTO, State.RECEIVING_MESSAGE_DATA);
-        receivingMessageData.put(Transition.TRANSITION_HELP_DATA, State.RECEIVING_MESSAGE_DATA);
-        receivingMessageData.put(Transition.TRANSITION_HELP_QUIT, State.RECEIVING_MESSAGE_DATA);
         receivingMessageData.put(Transition.TRANSITION_QUIT_SUCCESS, State.IDLE);
+
+        Map<Transition, State> messageQueued = new HashMap<>();
+        messageQueued.put(Transition.TRANSITION_MAIL_FROM_SUCCESS, State.SENDER_APPROVED);
+        messageQueued.put(Transition.TRANSITION_MAIL_FROM_ERROR, State.MESSAGE_QUEUED);
+        messageQueued.put(Transition.TRANSITION_QUIT_SUCCESS, State.IDLE);
 
         fsm.put(State.IDLE, idle);
         fsm.put(State.CONNECTED, connected);
         fsm.put(State.SENDER_APPROVED, senderApproved);
         fsm.put(State.RECIPIENTS_APPROVED, recipientsApproved);
         fsm.put(State.RECEIVING_MESSAGE_DATA, receivingMessageData);
+        fsm.put(State.MESSAGE_QUEUED, messageQueued);
 
     }
 
-    public String unifyCommand(String command) {
+    public String getState() {
 
-        return command.toLowerCase().replaceAll("\\s+","");
-
-    }
-
-    public String getTransition(String state, String status) {
-
-        State current = State.valueOf(state);
-        Transition transition = current.statusToTransition(status);
-
-        return transition.toString();
+        return this.state.toString();
 
     }
 
-    public String getSubsequentState(String state, String status) {
+    public String makeTransition(String command) {
 
-        State current = State.valueOf(state);
-        Transition transition = current.statusToTransition(status);
-        State subsequent = this.fsm.get(current).get(transition);
+        Transition currentTransition;
+        String reply = "";
 
-        return subsequent.toString();
+        String commandFirstFourChars = command.substring(0, 4);
+        if (commandFirstFourChars.equals("help")) {
+
+            switch (command) {
+                case "helphelo":
+                    reply = Transition.TRANSITION_HELP_CONNECT.getReply();
+                    return reply;
+                case "helpmailfrom":
+                    reply = Transition.TRANSITION_HELP_MAIL_FROM.getReply();
+                    return reply;
+                case "helprcptto":
+                    reply = Transition.TRANSITION_HELP_RCPTTO.getReply();
+                    return reply;
+                case "helpdata":
+                    reply = Transition.TRANSITION_HELP_DATA.getReply();
+                    return reply;
+                case "helpquit":
+                    reply = Transition.TRANSITION_HELP_QUIT.getReply();
+                    return reply;
+                default:
+                    reply = Transition.TRANSITION_HELP.getReply();
+                    return reply;
+            }
+
+        }
+
+        switch (this.state) {
+            case IDLE:
+                if (command.equals("helo")) {
+
+                    currentTransition = Transition.TRANSITION_CONNECT_SUCCESS;
+                    reply = currentTransition.getReply();
+                    CommandController.this.state = fsm.get(this.state).get(currentTransition);
+                    break;
+
+                } else {
+
+                    currentTransition = Transition.TRANSITION_CONNECT_FAILURE;
+                    reply = currentTransition.getReply();
+                    CommandController.this.state = fsm.get(this.state).get(currentTransition);
+                    break;
+
+                }
+            case CONNECTED:
+                if (command.equals("mailfrom")) {
+
+                    currentTransition = Transition.TRANSITION_MAIL_FROM_SUCCESS;
+                    reply = currentTransition.getReply();
+                    CommandController.this.state = fsm.get(this.state).get(currentTransition);
+                    break;
+
+                } else {
+
+                    currentTransition = Transition.TRANSITION_MAIL_FROM_ERROR;
+                    reply = currentTransition.getReply();
+                    CommandController.this.state = fsm.get(this.state).get(currentTransition);
+                    break;
+
+                }
+            case SENDER_APPROVED:
+                if (command.equals("rcptto")) {
+
+                    currentTransition = Transition.TRANSITION_RCPT_TO_SUCCESS;
+                    reply = currentTransition.getReply();
+                    CommandController.this.state = fsm.get(this.state).get(currentTransition);
+                    break;
+
+                } else {
+
+                    currentTransition = Transition.TRANSITION_RCPT_TO_FAILURE;
+                    reply = currentTransition.getReply();
+                    CommandController.this.state = fsm.get(this.state).get(currentTransition);
+                    break;
+
+                }
+            case RECIPIENTS_APPROVED:
+                if (command.equals("data")) {
+
+                    currentTransition = Transition.TRANSITION_DATA_INTERMEDIATE;
+                    reply = currentTransition.getReply();
+                    CommandController.this.state = fsm.get(this.state).get(currentTransition);
+                    break;
+
+                } else {
+
+                    currentTransition = Transition.TRANSITION_RCPT_TO_FAILURE;
+                    reply = currentTransition.getReply();
+                    CommandController.this.state = fsm.get(this.state).get(currentTransition);
+                    break;
+
+                }
+            case RECEIVING_MESSAGE_DATA:
+                if (command.equals("<CR>.<CR>")) {
+
+                    currentTransition = Transition.TRANSITION_DATA_SUCCESS;
+                    reply = currentTransition.getReply();
+                    CommandController.this.state = fsm.get(this.state).get(currentTransition);
+                    break;
+
+                } else {
+
+                    currentTransition = Transition.TRANSITION_RCPT_TO_FAILURE;
+                    reply = currentTransition.getReply();
+                    CommandController.this.state = fsm.get(this.state).get(currentTransition);
+                    break;
+
+                }
+
+        }
+
+        return reply;
 
     }
-
-    /*
-    public String getSubsequentState(String state, String currentTransition) {
-
-        State current = State.valueOf(state);
-        Transition transition = Transition.valueOf(currentTransition);
-        State subsequent = this.fsm.get(current).get(transition);
-
-        return subsequent.toString();
-
-    }
-    */
-
-    public String getServerReply(String state, String status) {
-
-        State current = State.valueOf(state);
-        Transition transition = current.statusToTransition(status);
-
-        return transition.getReply();
-
-    }
-
-    /*
-    public String getServerReply(String transition) {
-
-        Transition reply = Transition.valueOf(transition);
-
-        return reply.getReply();
-
-    }
-    */
 
 }

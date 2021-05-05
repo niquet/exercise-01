@@ -65,15 +65,15 @@ public class Acceptor {
 			
 			//register client for read and write
 			SelectionKey clientKey = client.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-			
-			//create new Stage instance and attach it to client key
+
+			//start and initialize state machine and attach it to client key
 			StateHandler state = new StateHandler();
 			clientKey.attach(state);
 			
 			System.out.println("Accepted connection from" + client.socket().getInetAddress().getHostAddress()+".");
 
-			//start and initialize state machine
-			state.advance();
+			// Get IDLE server reply
+			// state.co
 
 		}catch (Exception e){
 			System.out.println("Failed to accept new Client");
@@ -84,22 +84,25 @@ public class Acceptor {
 	private void printToConsole(SelectionKey key) throws IOException {
 		SocketChannel client = (SocketChannel) key.channel();
 		System.out.println("Reading...");
-		ByteBuffer buff = ByteBuffer.allocate(64);
+		ByteBuffer buff = ByteBuffer.allocate(256);
 
 		//reads from client and flips buffer to read
 		client.read(buff);
 		buff.flip();
 
-		//prints to consol
+		// Data as string
 		String data = coder.byteBufferToString(buff).trim();
-		System.out.println(data);
+		// System.out.println(data);
 
 		//gets Stage from channel and sets vals to return what was sent
 		StateHandler state = (StateHandler) key.attachment();
-		state.setByteBuffer(coder.stringToByteBufer("From Server:"+data));
+		String reply = state.executeCommand(data);
+
+		state.setByteBuffer(coder.stringToByteBufer(reply));
+		client.write(state.getByteBuffer());
 		state.setReturnFlag(true);
 
-		//chacks for "exit to close connection"
+		//checks for "exit to close connection"
 		if(data.equalsIgnoreCase("exit")) {
 			client.close();
 			System.out.println("Connection closed...");

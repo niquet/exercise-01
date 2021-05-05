@@ -15,6 +15,7 @@ public class MailHandler {
     public MailHandler() {
         this.sender = "";
         this.mailData = "";
+        this.recipient = null;
     }
 
 
@@ -57,6 +58,16 @@ public class MailHandler {
         System.arraycopy(this.recipient,0,recpNew,0,this.recipient.length);
         recpNew[recipient.length] = recp;
         this.recipient = recpNew;
+    }
+
+    public void addData(String data) {
+        this.mailData.concat(data);
+    }
+
+    public void clearMailHandlerData() {
+        this.sender = "";
+        this.mailData = "";
+        this.recipient = null;
     }
 
 
