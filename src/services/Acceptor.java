@@ -129,7 +129,7 @@ public class Acceptor {
 		if (coder.getLineFlag() && state.getState().equals("RECEIVING_MESSAGE_DATA")){
 			reply = state.executeCommand(data+"newline.newline");
 		}else if(data.trim().equals(".") && state.getState().equals("RECEIVING_MESSAGE_DATA")){
-			reply = state.executeCommand(data+"newline.newline");
+			reply = state.executeCommand("newline.newline");
 		}else{
 			reply = state.executeCommand(data);
 		}
