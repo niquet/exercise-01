@@ -99,12 +99,12 @@ public class StateHandler {
 		switch(command) {
 			// case "before":
 			case "helo":
-				strippedData = data.substring(0, data.indexOf(' '));
+				strippedData = data.substring(data.indexOf(' '), data.length());
 				break;
 			case "mailfrom":
 			case "rcptto":
-				strippedData = data.substring(0, data.indexOf(' '));
-				strippedData = strippedData.substring(0, data.indexOf(' '));
+				strippedData = data.substring(data.indexOf(' '), data.length());
+				strippedData = strippedData.substring(data.indexOf(' '), strippedData.length());
 				break;
 			// case "data":
 		}
@@ -171,7 +171,6 @@ public class StateHandler {
 				this.state = controller.getState();
 				break;
 			case "data":
-				this.mailHandler.addData(data);
 				replyString = controller.makeTransition(command);
 				this.state = controller.getState();
 				break;
@@ -209,6 +208,7 @@ public class StateHandler {
 				break;
 			default:
 				if(this.state == "RECEIVING_MESSAGE_DATA") {
+					this.mailHandler.addData(currentData);
 					break;
 				}
 				replyString = CommandController.Transition.TRANSITION_COMMAND_NOT_IMPLEMENTED.getReply();
