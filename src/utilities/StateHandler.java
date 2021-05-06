@@ -42,7 +42,7 @@ public class StateHandler {
 
 	public String unifyCommand(String command) {
 
-		return command.toLowerCase().replaceAll("\\s+","");
+		return command.toLowerCase().trim();
 
 	}
 
@@ -51,40 +51,40 @@ public class StateHandler {
 		if(data.startsWith("before")) {
 			return "before";
 		}
-		if(data.startsWith("helo")) {
+		if(data.startsWith("helo ")) {
 			return "helo";
 		}
-		if(data.startsWith("mailfrom")) {
+		if(data.startsWith("mail from: ")) {
 			return "mailfrom";
 		}
-		if(data.startsWith("rcptto")) {
+		if(data.startsWith("rcpt to: ")) {
 			return "rcptto";
 		}
-		if(data.startsWith("data")) {
+		if(data.equals("data")) {
 			return "data";
 		}
 		if(data.endsWith("newline.newline")) {
 			return "newline.newline";
 		}
-		if(data.startsWith("helphelo")) {
+		if(data.equals("help helo")) {
 			return "helphelo";
 		}
-		if(data.startsWith("helpmailfrom")) {
+		if(data.equals("help mail from")) {
 			return "helpmailfrom";
 		}
-		if(data.startsWith("helprcptto")) {
+		if(data.equals("help rcpt to")) {
 			return "helprcptto";
 		}
-		if(data.startsWith("helpdata")) {
+		if(data.equals("help data")) {
 			return "helpdata";
 		}
-		if(data.startsWith("helpquit")) {
+		if(data.equals("help quit")) {
 			return "helprcptto";
 		}
-		if(data.startsWith("help")) {
+		if(data.equals("help")) {
 			return "help";
 		}
-		if(data.startsWith("quit")) {
+		if(data.equals("quit")) {
 			return "quit";
 		}
 
