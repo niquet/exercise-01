@@ -41,11 +41,9 @@ public class SMTPServer {
 	
 	public void start() {
 		acc = new Acceptor(selector);
-		try {
-			acc.runLoop();
-		} catch (IOException e) {
-			System.out.println("Couldnt start Loop");
-		}
+
+		acc.runLoop();
+
 	}
 	
 	//runtime loop

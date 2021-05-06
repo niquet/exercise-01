@@ -23,12 +23,16 @@ public class Acceptor {
 	}
 	
 	//run Loop iterating over readySet
-	public void runLoop() throws IOException {
+	public void runLoop() {
 		while (true) {
-			if(selector.select()==0) {
-				continue;
+			try {
+				if(selector.select()==0) {
+					continue;
+				}
+			} catch (IOException e) {
+				System.out.println("Selector died");
 			}
-			
+
 			Set<SelectionKey> selectKeys = selector.selectedKeys();
 			Iterator<SelectionKey> iter = selectKeys.iterator();
 			
@@ -42,12 +46,34 @@ public class Acceptor {
 				if(key.isWritable()) {
 					StateHandler state = (StateHandler) key.attachment();
 					if(state.getReturnFlag()) {
-						sendToClient(key);
+						try {
+							sendToClient(key);
+						} catch (IOException e) {
+							System.out.println("client disconnected");
+							SocketChannel client = (SocketChannel) key.channel();
+							try {
+								client.close();
+							} catch (IOException ioException) {
+								System.out.println("cant close channel");
+								ioException.printStackTrace();
+							}
+						}
 					}
 				}
 
 				if(key.isReadable()) {
-					readKey(key);
+					try {
+						readKey(key);
+					} catch (IOException e) {
+						System.out.println("client disconnected");
+						SocketChannel client = (SocketChannel) key.channel();
+						try {
+							client.close();
+						} catch (IOException ioException) {
+							System.out.println("cant close channel");
+							ioException.printStackTrace();
+						}
+					}
 				}
 				iter.remove();
 			}
