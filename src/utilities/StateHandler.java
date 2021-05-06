@@ -104,7 +104,7 @@ public class StateHandler {
 			case "mailfrom":
 			case "rcptto":
 				strippedData = data.substring(data.indexOf(' ')+1, data.length());
-				strippedData = strippedData.substring(strippedData.indexOf(' ')+1, strippedData.length());
+				strippedData = strippedData.substring(strippedData.indexOf(' ')+1, strippedData.length()-1);
 				break;
 			// case "data":
 		}
