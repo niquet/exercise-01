@@ -21,6 +21,7 @@ public class StateHandler {
 	private String state;
 	private CommandController controller;
 	private MailHandler mailHandler;
+	private boolean connectionToClose=false;
 
 	private String lastCommand;
 	private ByteBuffer reply;
@@ -222,7 +223,8 @@ public class StateHandler {
 	public String getState() {
 		return state;
 	}
-	
+	public void setConncetionToClose(){this.connectionToClose =true;}
+	public boolean getConnectionToClose(){return this.connectionToClose;}
 	public String getLastCommand() {
 		return lastCommand;
 	}
