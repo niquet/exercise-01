@@ -103,12 +103,12 @@ public class StateHandler {
 				break;
 			case "mailfrom":
 			case "rcptto":
-				strippedData = data.substring(data.indexOf(' '), data.length());
-				strippedData = strippedData.substring(data.indexOf(' '), strippedData.length());
+				strippedData = data.substring(data.indexOf(' ')+1, data.length());
+				strippedData = strippedData.substring(strippedData.indexOf(' ')+1, strippedData.length());
 				break;
 			// case "data":
 		}
-
+		System.out.println("Sdata:"+strippedData);
 		return strippedData;
 
 	}
