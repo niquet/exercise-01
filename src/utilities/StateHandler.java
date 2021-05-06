@@ -109,7 +109,7 @@ public class StateHandler {
 				break;
 			// case "data":
 		}
-		System.out.println("Sdata:"+strippedData);
+		//System.out.println("Sdata:"+strippedData);
 		return strippedData;
 
 	}

@@ -144,7 +144,9 @@ public class Acceptor {
 		}
 		if(state.getState().equals("FINISHED")) {
 			state.setConncetionToClose();
-			client.write(state.getByteBuffer());
+			if(key.isWritable()) {
+				client.write(state.getByteBuffer());
+			}
 			client.close();
 			System.out.println("Connection closed...");
 		}
