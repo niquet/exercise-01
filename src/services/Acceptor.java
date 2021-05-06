@@ -75,7 +75,8 @@ public class Acceptor {
 			// Get BEFORE server reply
 			String reply = state.executeCommand("before");
 			state.setByteBuffer(coder.stringToByteBufer(reply));
-			client.write(state.getByteBuffer());
+			//client.write(state.getByteBuffer());
+			state.setReturnFlag(true);
 
 		}catch (Exception e){
 			System.out.println("Failed to accept new Client");
@@ -100,8 +101,10 @@ public class Acceptor {
 		StateHandler state = (StateHandler) key.attachment();
 		String reply;
 		if (coder.getLineFlag() && state.getState().equals("RECEIVING_MESSAGE_DATA")){
-			reply = state.executeCommand("newline.newline");
-		}else {
+			reply = state.executeCommand(data+"newline.newline");
+		}else if(data.trim().equals(".") && state.getState().equals("RECEIVING_MESSAGE_DATA")){
+			reply = state.executeCommand(data+"newline.newline");
+		}else{
 			reply = state.executeCommand(data);
 		}
 		System.out.println("C:"+data);
@@ -109,7 +112,7 @@ public class Acceptor {
 
 			System.out.println("R:"+reply);
 			state.setByteBuffer(coder.stringToByteBufer(reply));
-			client.write(state.getByteBuffer());
+			//client.write(state.getByteBuffer());
 			state.setReturnFlag(true);
 
 		}else{

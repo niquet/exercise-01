@@ -63,7 +63,7 @@ public class StateHandler {
 		if(data.startsWith("data")) {
 			return "data";
 		}
-		if(data.equals("newline.newline")) {
+		if(data.endsWith("newline.newline")) {
 			return "newline.newline";
 		}
 		if(data.startsWith("helphelo")) {
@@ -199,7 +199,7 @@ public class StateHandler {
 				break;
 			case "newline.newline":
 				if(!currentData.equals("newline.newline")) {
-					String rawData = currentData.substring(0, currentData.length()-4);
+					String rawData = currentData.substring(0, currentData.length()-16);
 					this.mailHandler.addData(rawData);
 				}
 				this.state = controller.getState();
