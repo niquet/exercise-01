@@ -1,5 +1,6 @@
 package utilities;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
@@ -50,7 +51,7 @@ public class MailHandler {
         if (this.recipient == null) {
             String[] recpStart = new String[1];
             recpStart[0] = recp;
-            this.recipient=recpStart;
+            this.recipient = recpStart;
             return;
         }
 
@@ -61,7 +62,7 @@ public class MailHandler {
     }
 
     public void addData(String data) {
-        this.mailData.concat(data);
+        this.mailData = this.mailData + data;
     }
 
     public void clearMailHandlerData() {
@@ -80,15 +81,30 @@ public class MailHandler {
             Files.createDirectory(path);
         }
 
-
+        //Writes Message from Sender for every recipient
         for (String recp : recipient) {
             Path writePath = Paths.get(path +  "/" + recp);
             if (!Files.exists(writePath)) {
                 Files.createDirectory(writePath);
             }
-            writePath = Paths.get(writePath.toString() + "/" + sender + "_" + Math.round(Math.random()*10000)+ ".txt");
-            Files.createFile(writePath);
-            RandomAccessFile file = new RandomAccessFile(writePath.toString(), "rw");
+            Path finalWritePath = Paths.get(writePath.toString() + "/" + sender + "_" + Math.round(Math.random()*10000) + ".txt");
+
+            // Checks whether the mail specific id is already taken an assigns a new value
+            while (true) {
+                File f = new File(finalWritePath.toString());
+
+                if(f.exists()) {
+                    finalWritePath = Paths.get(writePath.toString() + "/" + sender + "_" + Math.round(Math.random()*10000) + ".txt");
+                    continue;
+                }
+
+                break;
+            }
+
+
+            // Create the file and write to it
+            Files.createFile(finalWritePath);
+            RandomAccessFile file = new RandomAccessFile(finalWritePath.toString(), "rw");
             ByteBuffer buffi = ByteBuffer.allocate(mailData.length());
             buffi.put(mailData.getBytes());
             buffi.flip();
