@@ -42,20 +42,6 @@ public class Acceptor {
 				if(key.isAcceptable()){
 					acceptClient(key);
 				}
-				if(key.isReadable()) {
-					try {
-						readKey(key);
-					} catch (IOException e) {
-						System.out.println("client disconnected");
-						SocketChannel client = (SocketChannel) key.channel();
-						try {
-							client.close();
-						} catch (IOException ioException) {
-							System.out.println("cant close channel");
-							ioException.printStackTrace();
-						}
-					}
-				}
 				if(key.isWritable()) {
 					StateHandler state = (StateHandler) key.attachment();
 					if(state.getReturnFlag()) {
@@ -70,6 +56,20 @@ public class Acceptor {
 								System.out.println("cant close channel");
 								ioException.printStackTrace();
 							}
+						}
+					}
+				}
+				if(key.isReadable()) {
+					try {
+						readKey(key);
+					} catch (IOException e) {
+						System.out.println("client disconnected");
+						SocketChannel client = (SocketChannel) key.channel();
+						try {
+							client.close();
+						} catch (IOException ioException) {
+							System.out.println("cant close channel");
+							ioException.printStackTrace();
 						}
 					}
 				}
@@ -144,6 +144,8 @@ public class Acceptor {
 		}
 		if(state.getState().equals("FINISHED")) {
 			state.setConncetionToClose();
+			client.write(state.getByteBuffer());
+			client.close();
 			System.out.println("Connection closed...");
 		}
 	}
@@ -152,10 +154,5 @@ public class Acceptor {
 		SocketChannel client = (SocketChannel) key.channel();
 		StateHandler state = (StateHandler) key.attachment();
 		client.write(state.getByteBuffer());
-		state.setReturnFlag(false);
-		if(state.getConnectionToClose()){
-			client.close();
-		}
-
 	}
 }
