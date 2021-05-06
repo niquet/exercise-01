@@ -104,7 +104,7 @@ public class StateHandler {
 			case "mailfrom":
 			case "rcptto":
 				strippedData = data.substring(data.indexOf(' ')+1, data.length());
-				strippedData = strippedData.substring(strippedData.indexOf(' ')+1, strippedData.length()-1);
+				strippedData = strippedData.substring(strippedData.indexOf(' ')+1, strippedData.length());
 				break;
 			// case "data":
 		}
@@ -156,7 +156,7 @@ public class StateHandler {
 					sender = strippedData;
 				}
 				replyString = controller.makeTransition(command);
-				this.mailHandler.setSender(sender);
+				this.mailHandler.setSender(sender.replaceAll("(\\r|\\n)", ""));
 				this.state = controller.getState();
 				break;
 			case "rcptto":
@@ -167,7 +167,7 @@ public class StateHandler {
 					recipient = strippedData;
 				}
 				replyString = controller.makeTransition(command);
-				this.mailHandler.addRecipient(recipient);
+				this.mailHandler.addRecipient(recipient.replaceAll("(\\r|\\n)", ""));
 				this.state = controller.getState();
 				break;
 			case "data":
