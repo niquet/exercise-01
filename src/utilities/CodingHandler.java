@@ -10,6 +10,7 @@ import java.sql.SQLOutput;
 
 public class CodingHandler {
 	private Charset messageCharset = null;
+	private boolean lineFlag =false;
 	
 	public CodingHandler(String charSet) {
 		try {
@@ -29,8 +30,12 @@ public class CodingHandler {
 		return buff;
 	}
 	
-	//doesnt work
+
 	public String byteBufferToString(ByteBuffer buff) {
+		this.lineFlag=false;
+		if (checkLine(buff)){
+			this.lineFlag=true;
+		}
 		CharsetDecoder dec = messageCharset.newDecoder();
 		CharBuffer charBuff = null;
 		try {
@@ -38,26 +43,22 @@ public class CodingHandler {
 		} catch (CharacterCodingException e) {
 			System.out.println("Cant decode Buffer");
 		}
-		return charBuff.toString();
+		String retVal = charBuff.toString();
+		return retVal;
 	}
 
-	private boolean readCommandLine(ByteBuffer buffer) {
+	private boolean checkLine(ByteBuffer buffer) {
 
-		boolean foundHyphen = false;
 		int pos = buffer.position();
-		for(int i = pos; i < buffer.position(); i++) {
-			if(buffer.get(i) == '-' && (i == 3))
-			{
-				foundHyphen = true;
-			}
-
+		for(int i = 0; i < buffer.limit(); i++) {
 			if(buffer.get(i) == '\n') {
 				if((i-1) >= 0 && buffer.get(i-1) == '\r') {
-					if(foundHyphen) {
-						foundHyphen = false;
-					} else {
-						buffer.flip();
-						return true;
+					if((i-2) >= 0 && buffer.get(i-2) == '.') {
+						if((i-3) >= 0 && buffer.get(i-3) == '\n') {
+							if((i-4) >= 0 && buffer.get(i-4) == '\r') {
+								return true;
+							}
+						}
 					}
 				}
 			}
@@ -65,4 +66,6 @@ public class CodingHandler {
 
 		return false;
 	}
+
+	public boolean getLineFlag(){return this.lineFlag;}
 }

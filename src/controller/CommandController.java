@@ -208,7 +208,7 @@ public class CommandController {
                     allowed = new String[]{"data", "rcptto", "help", "helpmailfrom", "helprcptto", "helpdata", "helpquit", "quit"};
                     break;
                 case RECEIVING_MESSAGE_DATA:
-                    allowed = new String[]{"\r\n.\r\n", "help", "helpmailfrom", "helprcptto", "helpdata", "helpquit", "quit"};
+                    allowed = new String[]{"newline.newline", "help", "helpmailfrom", "helprcptto", "helpdata", "helpquit", "quit"};
                     break;
                 case MESSAGE_QUEUED:
                     allowed = new String[]{"mailfrom", "help", "helpmailfrom", "helprcptto", "helpdata", "helpquit", "quit"};
@@ -401,7 +401,7 @@ public class CommandController {
 
                 }
             case RECEIVING_MESSAGE_DATA:
-                if (command.contains("\r\n.\r\n")) {
+                if (command.equals("newline.newline")) {
 
                     currentTransition = Transition.TRANSITION_DATA_SUCCESS;
                     reply = currentTransition.getReply();
@@ -419,6 +419,16 @@ public class CommandController {
                     reply = "SHIT";
                     break;
 
+                }
+            case MESSAGE_QUEUED:
+                if(command.equals("quit")){
+                    currentTransition =Transition.TRANSITION_QUIT_SUCCESS;
+                    reply = currentTransition.getReply();
+                    this.state = fsm.get(this.state).get(currentTransition);
+                    break;
+                }else{
+                    reply ="YEET";
+                    break;
                 }
 
         }

@@ -63,8 +63,8 @@ public class StateHandler {
 		if(data.startsWith("data")) {
 			return "data";
 		}
-		if(data.contains("\r\n.\r\n")) {
-			return "\r\n.\r\n";
+		if(data.equals("newline.newline")) {
+			return "newline.newline";
 		}
 		if(data.startsWith("helphelo")) {
 			return "helphelo";
@@ -197,15 +197,15 @@ public class StateHandler {
 				replyString = controller.makeTransition(command);
 				this.state = controller.getState();
 				break;
-			case "\r\n.\r\n":
-				if(!currentData.equals("\r\n.\r\n")) {
-					String rawData = currentData.substring(0, currentData.indexOf("\r\n.\r\n"));
+			case "newline.newline":
+				if(!currentData.equals("newline.newline")) {
+					String rawData = currentData.substring(0, currentData.length()-4);
 					this.mailHandler.addData(rawData);
 				}
 				this.state = controller.getState();
 				this.mailHandler.store();
 				this.mailHandler.clearMailHandlerData();
-				replyString = controller.makeTransition("\r\n.\r\n");
+				replyString = controller.makeTransition("newline.newline");
 				break;
 			default:
 				if(this.state == "RECEIVING_MESSAGE_DATA") {

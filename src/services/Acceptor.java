@@ -85,30 +85,38 @@ public class Acceptor {
 	//dummy just to get a return to server
 	private void readKey(SelectionKey key) throws IOException {
 		SocketChannel client = (SocketChannel) key.channel();
-		System.out.println("Reading...");
-		ByteBuffer buff = ByteBuffer.allocate(256);
+		//System.out.println("Reading...");
+		ByteBuffer buff = ByteBuffer.allocate(1024);
 
 		//reads from client and flips buffer to read
 		client.read(buff);
 		buff.flip();
 
 		// Data as string
-		String data = coder.byteBufferToString(buff).trim();
+		String data = coder.byteBufferToString(buff);
 		// System.out.println(data);
 
 		//gets Stage from channel and sets vals to return what was sent
 		StateHandler state = (StateHandler) key.attachment();
-		String reply = state.executeCommand(data);
-
+		String reply;
+		if (coder.getLineFlag() && state.getState().equals("RECEIVING_MESSAGE_DATA")){
+			reply = state.executeCommand("newline.newline");
+		}else {
+			reply = state.executeCommand(data);
+		}
+		System.out.println("C:"+data);
 		if(!reply.equals("")){
 
+			System.out.println("R:"+reply);
 			state.setByteBuffer(coder.stringToByteBufer(reply));
 			client.write(state.getByteBuffer());
 			state.setReturnFlag(true);
 
+		}else{
+			System.out.println("no reply generated");
 		}
 
-		//checks for "exit to close connection"
+
 		if(state.getState().equals("FINISHED")) {
 			client.close();
 			System.out.println("Connection closed...");
