@@ -414,20 +414,12 @@ public class CommandController {
                     this.state = fsm.get(this.state).get(currentTransition);
                     break;
 
-                } else {
-
-                    reply = "SHIT";
-                    break;
-
                 }
             case MESSAGE_QUEUED:
                 if(command.equals("quit")){
                     currentTransition =Transition.TRANSITION_QUIT_SUCCESS;
                     reply = currentTransition.getReply();
                     this.state = fsm.get(this.state).get(currentTransition);
-                    break;
-                }else{
-                    reply ="YEET";
                     break;
                 }
 

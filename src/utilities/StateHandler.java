@@ -131,7 +131,10 @@ public class StateHandler {
 		if(!commandAllowed && this.state != "RECEIVING_MESSAGE_DATA") {
 			return CommandController.Transition.TRANSITION_BAD_COMMAND_SEQUENCE.getReply();
 		}
-
+		//sets command to "" if forbidden command was detected
+		if(!commandAllowed&&this.state =="RECEIVING_MESSAGE_DATA"){
+			command="";
+		}
 		// Begin processing / executing the commands
 		String strippedData;
 		String sender;
